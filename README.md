@@ -1,4 +1,4 @@
-# Balt_Cod_Her_SDMs
+# SDMs for dominant demersal fish in the Baltic Sea
 Seasonal (winter & autumn) SDMs for Baltic demersal fish (Dab, Flounder, Plaice, Cod) from twenty years of scientifc bottom trawls surveys.
 
 Data availability: Freely availble for download.
