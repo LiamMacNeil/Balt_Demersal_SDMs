@@ -64,20 +64,20 @@ dat <- read_csv("../Data/HH_HL_CA_AllSpec_Swept.csv")
 dat <- dat %>% 
   #filter(ScientificName_WoRMS == "Pleuronectes platessa") %>% 
   #filter(ScientificName_WoRMS == "Platichthys flesus") %>% 
-  filter(ScientificName_WoRMS == "Gadus morhua") %>% 
-  #filter(ScientificName_WoRMS == "Limanda limanda") %>% 
+  #filter(ScientificName_WoRMS == "Gadus morhua") %>% 
+  filter(ScientificName_WoRMS == "Limanda limanda") %>% 
   #filter(Year != 2008) %>%
   filter(HaulVal == "V" | HaulVal == "C"| HaulVal == "A") %>% 
   filter(Quarter == 1) %>% 
   filter(meanLong != "NA") %>% 
   filter(meanLat != "NA") %>%
-  filter(Year > 2010) %>%
-  # Size distinction used for Cod
-  # Juvenile
-  filter(LngtClass < 350) 
-  # Adult
-  #filter(LngtClass > 349) 
+  filter(Year < 2011) #%>%
 
+# Size distinction used for Cod
+# Adult
+#filter(LngtClass > 349) 
+# Juvenile
+#filter(LngtClass < 350) 
 
 #unique(dat$ScientificName_WoRMS)
 
@@ -164,12 +164,12 @@ full$Seabed.Habitat <- as.factor(full$Seabed.Habitat)
 sf <- sf::st_as_sf(full, coords = c("Longitude", "Latitude"), crs = st_crs(icesarea))
 
 # Spatial autocorrelarion of predictors
-#png("../Figures/GAM/Spatial_autocorrelation/JuvenileCod_Q1_2001_blocking.png", width = 20, height = 12, res = 300, units = "cm")
-sac1 <- cv_spatial_autocor(r = Q1_layers_balt[[varselect]], 
+#png("../Figures/GAM/Spatial_autocorrelation/CodAdult_Q1_2020_blocking.png", width = 20, height = 12, res = 300, units = "cm")
+sac1 <- blockCV::cv_spatial_autocor(r = Q1_layers_balt[[varselect]], 
                            num_sample = 5000)
 #dev.off()
 
-#png("../Figures/GAM/Spatial_autocorrelation/JuvenileCod_Q1_2001_variogram.png", width = 16, height = 10, res = 300, units = "cm")
+#png("../Figures/GAM/Spatial_autocorrelation/CodAdult_Q1_2020_variogram.png", width = 16, height = 10, res = 300, units = "cm")
 plot(sac1$variograms[[1]])
 #dev.off()
 
@@ -179,7 +179,7 @@ plot(sac1$variograms[[1]])
 #                  k = 5, 
 #                  scale = TRUE)
 
-#png("../Figures/GAM/Spatial_autocorrelation/JuvenileCod_Q1_2001_blocks.png", width = 16, height = 10, res = 300, units = "cm")
+#png("../Figures/GAM/Spatial_autocorrelation/CodAdult_Q1_2020_blocks.png", width = 16, height = 10, res = 300, units = "cm")
 bloCV <- cv_spatial(x = sf,
                     column = "Density_log10",
                     size = sac1$range,
@@ -188,7 +188,7 @@ bloCV <- cv_spatial(x = sf,
                     iteration = 50)
 #dev.off()
 
-#png("../Figures/GAM/Spatial_autocorrelation/JuvenileCod_Q1_2001_MESS.png", width = 16, height = 10, res = 300, units = "cm")
+#png("../Figures/GAM/Spatial_autocorrelation/CodAdult_Q1_2020_MESS.png", width = 16, height = 10, res = 300, units = "cm")
 cv_similarity(cv = bloCV, # the environmental clustering
               x = sf, 
               r = Q1_layers_balt[[varselect]], 
@@ -202,13 +202,13 @@ cv_similarity(cv = bloCV, # the environmental clustering
 #                  selection = "random", # random blocks-to-fold
 #                  iteration = 50) # also create folds for biomod2
 
-#png("../Figures/GAM/Spatial_autocorrelation/JuvenileCod_Q1_2001_cv.png", width = 18, height = 12, res = 300, units = "cm")
+#png("../Figures/GAM/Spatial_autocorrelation/CodAdult_Q1_2020_cv.png", width = 18, height = 12, res = 300, units = "cm")
 cvp <- cv_plot(cv = bloCV, 
                x = sf,
                points_alpha = 0.5,
                label_size = 3)
 
-#ggsave("../Figures/GAM/Spatial_autocorrelation/JuvenileCod_Q1_2001_cv.png", cvp, width = 24, height = 14, dpi = 300, units = "cm")
+#ggsave("../Figures/GAM/Spatial_autocorrelation/CodAdult_Q1_2020_cv.png", cvp, width = 24, height = 14, dpi = 300, units = "cm")
 
 # Pulling full dataset with fold metadata
 full_bCV <- cvp$data
@@ -219,9 +219,9 @@ full_bCV <- cvp$data
 formula_GAM <- as.formula(paste(names(full_bCV)[12], "~", paste(varselect, collapse = "+")))
 formula_GAM
 
-gam1 <- mgcv::gam(Density_log10 ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
+gam1 <- mgcv::gam(Density_kg ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
       data = full, family = gaussian(), method = 'ML', select = T, gamma = 1.4)
-gam2 <- mgcv::gam(Density_log10 ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
+gam2 <- mgcv::gam(Density_kg ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
                   data = full, family = tw(link = "log"), method = 'ML', select = T, gamma = 1.4)
 
 AIC(gam1,gam2)
@@ -245,8 +245,9 @@ for (i in folds){
   
   #mod_GAM <- GAM(formula = formula_GAM, family = gaussian(link = "identity"), data = dat_train_fold)
   
-  mod_GAM <-mgcv::gam(Density_log10 ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
-                      data = full, family = gaussian(), method = 'ML', select = T, gamma = 1.4)
+  mod_GAM <- mgcv::gam(Density_kg ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
+                       data = full, family = tw(link = "log"), method = 'ML', select = T, gamma = 1.4)
+  
   print(summary(mod_GAM))
   par(mfrow = c(2, 2))
   gam.check(mod_GAM)
@@ -273,8 +274,8 @@ disp_df <- do.call(rbind, disp)
 colnames(cors_df) <- c("folds","Observed_Density", "Predicted")
 
 pred_cor <- cors_df %>% 
-  filter(Observed_Density > 0) %>% 
-  filter(Predicted > 0) %>% 
+  #filter(Observed_Density > 0) %>% 
+  #filter(Predicted > 0) %>% 
   ggplot(aes(x = (Observed_Density), y= Predicted))+
   geom_point(aes(color = folds), size = 2, alpha = 0.5)+
   geom_abline(slope=1, intercept=0)+
@@ -285,7 +286,7 @@ pred_cor <- cors_df %>%
            method = "pearson", 
            size=4,  r.accuracy = 0.01, label.y.npc="top", label.x.npc = "left")
 #guides(fill = FALSE, color = FALSE, linetype = FALSE, shape = FALSE)
-ggsave("../Figures/GAM/Q1/JuvenileCod_Q1_2001_PredCor.png", pred_cor, width = 16, height = 12, units = "cm", dpi = 300)
+ggsave("../Figures/GAM/Q1/CodAdult_Q1_2020_PredCor.png", pred_cor, width = 16, height = 12, units = "cm", dpi = 300)
 
 
 discrimination <- list()
@@ -311,7 +312,7 @@ metrics$Year <- "2001-2010"
 metrics$Taxa <- unique(dat$ScientificName_WoRMS)
 metrics$model <- "GAM"
 
-write.csv(metrics, "../Model_Metrics/GAM/JuvenileCod_Q1_2001_GAM.csv")
+write.csv(metrics, "../Model_Metrics/GAM/CodAdult_Q1_2020_GAM.csv")
 
 # Denisty plot (log transformed and normalized)
 #pred_dens <- preds %>% 
@@ -326,7 +327,7 @@ write.csv(metrics, "../Model_Metrics/GAM/JuvenileCod_Q1_2001_GAM.csv")
 #  theme(legend.position = "none")+
 #  labs(x = "Observed", y = "Predicted")+
 #  scale_fill_viridis_d(option="viridis")
-#ggsave("../Figures/GAM/Q1/JuvenileCod_Q1_2001_PredDens.png", pred_dens, width = 15, height = 12, units = "cm", dpi = 300)
+#ggsave("../Figures/GAM/Q1/CodAdult_Q1_2020_PredDens.png", pred_dens, width = 15, height = 12, units = "cm", dpi = 300)
 
 # Deviance of residuals (Precision?)
 1 - pchisq(deviance(mod_GAM), df.residual(mod_GAM))
@@ -334,23 +335,21 @@ write.csv(metrics, "../Model_Metrics/GAM/JuvenileCod_Q1_2001_GAM.csv")
 
 ############ Prediction ##################
 
-GAM_final_mod <- mgcv::gam(Density_log10 ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
-                           data = full, family = gaussian(), method = 'ML', select = T, gamma = 1.4)
-
-
+GAM_final_mod <-mgcv::gam(Density_kg ~ Seabed.Habitat + s(Bottom.salinity)+s(Bottom.temperature)+s(Bottom.oxygen)+s(Chlorophyll)+s(MLD)+s(Surface.temperature), 
+                          data = full, family = gaussian(), method = 'ML', select = T, gamma = 1.4)
 
 par(mfrow = c(2, 2))
 gam.check(GAM_final_mod)
 
-#saveRDS(mod_GAM, file = paste0("../Models/GAM/JuvenileCod_Q1_2001_Valid.rds"))
-saveRDS(GAM_final_mod, file = paste0("../Models/GAM/JuvenileCod_Q1_2001_Prediction.rds"))
+#saveRDS(mod_GAM, file = paste0("../Models/GAM/CodAdult_Q1_2020_Valid.rds"))
+saveRDS(GAM_final_mod, file = paste0("../Models/GAM/CodAdult_Q1_2020_Prediction.rds"))
 
 par(mfrow=c(3, 3), mai = c(0.35, 0.35, 0.35, 0.35))
 
 p <- plot_model(GAM_final_mod, type = "pred", title  = "")
 nCol <- floor(sqrt((length(p))))
 
-png("../Figures/GAM/Q1/JuvenileCod_Q1_2001_pdp.png", width = 15, height = 12, res = 300, units = "cm")
+png("../Figures/GAM/Q1/CodAdult_Q1_2020_pdp.png", width = 15, height = 12, res = 300, units = "cm")
 do.call("grid.arrange", c(p, ncol=nCol))
 dev.off()
 
@@ -360,19 +359,17 @@ GAM_P<- crop(mask(GAM_P, icesarea), extent(icesarea))
 # Back-transformation (log10) to kg km^-2
 GAM_P <- (10^(GAM_P)-1)/1000
 
-GAM_P <- raster("../Predictions/JuvenileCod_Q1_2001_GAM.tif")
+GAM_P <- raster("../Predictions/CodAdult_Q1_2020_GAM.tif")
 
-png("../Figures/GAM/Q1/JuvenileCod_Q1_2001_predmap.png", width = 15, height = 12, res = 300, units = "cm")
+png("../Figures/GAM/Q1/CodAdult_Q1_2020_predmap.png", width = 15, height = 12, res = 300, units = "cm")
 plot(abs(GAM_P),
      col = viridis(20), 
      axis.args=list(cex.axis=1.25),
      legend.width=1.5,
      
-     #zlim=c(0,1.25)
+     zlim=c(0,0.5)
      
-     zlim=c(0,0.75)
-     
-     #zlim=c(0,0.35)
+     #zlim=c(0,0.25)
      
      # Dab
      #zlim=c(0,0.25)
@@ -389,5 +386,5 @@ raster::contour(abs((GAM_P) > quantile(abs(GAM_P), probs = 0.95)), lwd = 0.25, c
 dev.off()
 
 
-writeRaster(GAM_P, "../Predictions/JuvenileCod_Q1_2001_GAM.tif", overwrite=TRUE)
+writeRaster(GAM_P, "../Predictions/CodAdult_Q1_2020_GAM.tif", overwrite=TRUE)
 
