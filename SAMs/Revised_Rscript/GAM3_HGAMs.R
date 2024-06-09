@@ -60,13 +60,12 @@ icesarea_sf <- read_sf("../../Oceanographic/Data/ICES_areas/", layer = "ICES_Are
 
 GAM_3 <- mgcv::bam(Density_log ~ 
                     te(Latitude, Longitude, Year, by = ScientificName_WoRMS) + 
-                    s(Year, ScientificName_WoRMS, bs="fs")+ 
+                    #s(Year, ScientificName_WoRMS, bs="fs")+ 
                     s(Depth, ScientificName_WoRMS, by = Quarter, bs="fs", m=2,k=45)+
                     s(bottomT, ScientificName_WoRMS, by = Quarter,bs="fs", m=2,k=45)+
                     #s(chl, ScientificName_WoRMS, by = Quarter, bs="fs",m=2,k=45)+
                     s(BottomOxygen, ScientificName_WoRMS, by = Quarter, bs="fs", m=2, k=45)+
-                    s(BottomSalinity, ScientificName_WoRMS, by = Quarter, m=2, bs="fs")+
-                    s(ScientificName_WoRMS, bs = "re"),
+                    s(BottomSalinity, ScientificName_WoRMS, by = Quarter, m=2, bs="fs"),
                   data = dat, 
                   family = tw(), 
                   method = 'fREML', 
@@ -278,12 +277,13 @@ fourteen <- draw(GAM_3, residuals = T, select = 18, grouped_by = T)+
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")
 
-fifteen <- draw(GAM_3, residuals = T, select = 19, grouped_by = T)+
-  theme_bw(8)+
-  ggtitle("")+
-  theme(axis.text.x = element_text(angle=45, hjust=1),
-        axis.title.x = element_text(size=6),
-        plot.margin=unit(c(-0.50,0,0,0), "null"))
+# Not used, indistinguishable in concurvity plots
+#fifteen <- draw(GAM_3, residuals = T, select = 19, grouped_by = T)+
+#  theme_bw(8)+
+#  ggtitle("")+
+#  theme(axis.text.x = element_text(angle=45, hjust=1),
+#        axis.title.x = element_text(size=6),
+#        plot.margin=unit(c(-0.50,0,0,0), "null"))
 
 
 # Env partials to collage
@@ -298,12 +298,15 @@ ggsave("../Figures/Spring2024Revision/GAM3_env_Partials.png",env, units = "cm", 
 
 # Clean mapping for species-level spatiotemporal autocorrelation partials
 tensor <- data.frame(one[1]) %>% 
-  #mutate(data.Year = round(data.Year, 0)) %>% 
+  mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
   st_intersection(icesarea_sf)
+
+#Center the scale on zero to avoid confusion
+limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 
 one_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
@@ -311,22 +314,26 @@ one_tens <- ggplot()+
   theme_bw(12)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  #facet_wrap(~data.Year)+
+  facet_wrap(~data.Year)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
   scale_fill_distiller(palette = "RdBu",
                        name = "Partial effect",
-                       na.value = NA)+
+                       na.value = NA,
+                       limit=limit)+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(two[1]) %>% 
-  #mutate(data.Year = round(data.Year, 0)) %>% 
+  mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
   st_intersection(icesarea_sf)
+
+#Center the scale on zero to avoid confusion
+limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 
 two_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
@@ -334,22 +341,26 @@ two_tens <- ggplot()+
   theme_bw(12)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  #facet_wrap(~data.Year)+
+  facet_wrap(~data.Year)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
   scale_fill_distiller(palette = "RdBu",
                        name = "Partial effect",
-                       na.value = NA)+
+                       na.value = NA, 
+                       limit=limit)+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(three[1]) %>% 
-  #mutate(data.Year = round(data.Year, 0)) %>% 
+  mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
   st_intersection(icesarea_sf)
+
+#Center the scale on zero to avoid confusion
+limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 
 three_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
@@ -357,22 +368,26 @@ three_tens <- ggplot()+
   theme_bw(12)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  #facet_wrap(~data.Year)+
+  facet_wrap(~data.Year)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
   scale_fill_distiller(palette = "RdBu",
                        name = "Partial effect",
-                       na.value = NA)+
+                       na.value = NA, 
+                       limit=limit)+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(four[1]) %>% 
-  #mutate(data.Year = round(data.Year, 0)) %>% 
+  mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
   st_intersection(icesarea_sf)
+
+#Center the scale on zero to avoid confusion
+limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 
 four_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
@@ -380,22 +395,26 @@ four_tens <- ggplot()+
   theme_bw(12)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  #facet_wrap(~data.Year)+
+  facet_wrap(~data.Year)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
   scale_fill_distiller(palette = "RdBu",
                        name = "Partial effect",
-                       na.value = NA)+
+                       na.value = NA, 
+                       limit=limit)+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(five[1]) %>% 
-  #mutate(data.Year = round(data.Year, 0)) %>% 
+  mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
   st_intersection(icesarea_sf)
+
+#Center the scale on zero to avoid confusion
+limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 
 five_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
@@ -403,13 +422,14 @@ five_tens <- ggplot()+
   theme_bw(12)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  #facet_wrap(~data.Year)+
+  facet_wrap(~data.Year)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
   scale_fill_distiller(palette = "RdBu",
                        name = "Partial effect",
-                       na.value = NA)+
+                       na.value = NA, 
+                       limit=limit)+
   labs(x = "Longitude", y = "Latitude")
 
 maps <- one_tens + two_tens + three_tens + four_tens + 

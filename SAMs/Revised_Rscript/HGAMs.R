@@ -66,8 +66,7 @@ icesarea_sf <- read_sf("../../Oceanographic/Data/ICES_areas/", layer = "ICES_Are
 GAM_default <- mgcv::bam(Density_log ~ 
                    te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
                    #s(Year, Quarter, by = ScientificName_WoRMS,  bs="fs",k=20)+ 
-                   te(Year, Depth, by = ScientificName_WoRMS, m=2, bs = "fs")+
-                   s(ScientificName_WoRMS, bs = "re"),
+                   te(Year, Depth, by = ScientificName_WoRMS, m=2, bs = "fs"),
                  data = dat, 
                  family = tw(), 
                  method = 'fREML', 
@@ -83,8 +82,7 @@ dat <- start_event(dat, column="Year",
 GAM <- mgcv::bam(Density_log ~ 
                    te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
                    #s(Year, Quarter, by = ScientificName_WoRMS,  bs="fs",k=20)+ 
-                   te(Year, Depth, by = ScientificName_WoRMS, m=2, bs = "fs")+
-                   s(ScientificName_WoRMS, bs = "re"),
+                   te(Year, Depth, by = ScientificName_WoRMS, m=2, bs = "fs"),
                  data = dat, 
                  family = tw(), 
                  method = 'fREML', 
@@ -262,13 +260,14 @@ ten <- draw(GAM, residuals = F, select = 10, rug = F)+
   labs(caption = "",
        subtitle = expression(italic('Gadus morhua')~(Adult)))
 
-eleven <- draw(GAM, residuals = F, select = 11)+
-  #geom_line(linewidth=1.1)+
-  theme_bw(10)+
-  theme(
-        plot.margin=unit(c(-0.50,0,0,0), "null"))+
-  ggtitle("")+
-  labs(caption = "")
+# Not use, indistinguishable in concurvity plots
+#eleven <- draw(GAM, residuals = F, select = 11)+
+#  #geom_line(linewidth=1.1)+
+#  theme_bw(10)+
+#  theme(
+#        plot.margin=unit(c(-0.50,0,0,0), "null"))+
+#  ggtitle("")+
+#  labs(caption = "")
        
 env <- six + seven + eight + nine + ten +  plot_layout(ncol = 3,nrow = 2)
 ggsave("../Figures/Spring2024Revision/GAM_norug_env_Partials.png", env, units = "cm", width = 17, height = 15, dpi = 600)
