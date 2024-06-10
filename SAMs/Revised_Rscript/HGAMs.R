@@ -11,7 +11,7 @@ library(oce)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 #data
-dat <- read_csv("../Data/Taxa_env_GAMs_v2.csv") %>% 
+dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>% 
   rename(SurfaceOxygen = o2...5, 
          BottomOxygen = o2...6,
          SurfaceSalinity = so...7,
@@ -41,31 +41,40 @@ ylim <- c(53.91644, 59.23877)
 sf_use_s2(F)
 
 # High res polygons
-icesarea <- read_sf("../../Oceanographic/Data/ICES_areas/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
+icesarea <- read_sf("../../../Oceanographic/Data/ICES_shapefiles/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
   filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
            SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
   st_transform(st_crs(4326)) %>% 
   st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) %>% 
   as("Spatial")  
 
-Coastline <- read_sf("../../../Feb2023_Transfer/Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_f_L1") %>% 
+Coastline <- read_sf("../../../Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_f_L1") %>% 
   st_transform(4326) %>% 
   st_crop(st_bbox(icesarea))
 
+#icesarea_sf <- read_sf("../../../Oceanographic/Data/ICES_shapefiles/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
+#  filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
+#           SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
+#  st_transform(st_crs(4326)) %>% 
+#  st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) 
+
 # Extra for cropping tiled sf smooths
-icesarea_sf <- read_sf("../../Oceanographic/Data/ICES_areas/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
-  filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
-           SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
-  st_transform(st_crs(4326)) %>% 
-  st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) 
+###########################
+dat_sf <- dat %>% 
+  st_as_sf(coords = c("Longitude", "Latitude"), 
+           crs = st_crs(4326))
+
+BITS_buffer <- st_buffer(dat_sf, dist = 0.25) %>% 
+  st_geometry(dat_sf) %>% 
+  st_union()
 
 ################################################################
 # Approach 1
 ################################################################
 
 GAM_default <- mgcv::bam(Density_log ~ 
-                   te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
-                   #s(Year, Quarter, by = ScientificName_WoRMS,  bs="fs",k=20)+ 
+                   te(Latitude, Longitude, Year, by=ScientificName_WoRMS, m=2) + 
+                   #s(Year, Quarter, by = ScientificName_WoRMS,  bs="fs")+ 
                    te(Year, Depth, by = ScientificName_WoRMS, m=2, bs = "fs"),
                  data = dat, 
                  family = tw(), 
@@ -81,8 +90,7 @@ dat <- start_event(dat, column="Year",
 
 GAM <- mgcv::bam(Density_log ~ 
                    te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
-                   #s(Year, Quarter, by = ScientificName_WoRMS,  bs="fs",k=20)+ 
-                   te(Year, Depth, by = ScientificName_WoRMS, m=2, bs = "fs"),
+                   te(Year, Depth, by = ScientificName_WoRMS, bs = "fs"),
                  data = dat, 
                  family = tw(), 
                  method = 'fREML', 
@@ -91,12 +99,12 @@ GAM <- mgcv::bam(Density_log ~
                  rho = rho,
                  AR.start = start.event)
 saveRDS(GAM, file = "../GAMs/GAM1.rds")
+GAM <- readRDS("../GAMs/GAM1.rds")
 
 
 par(mfrow = c(2,2))
 gam.check(GAM)
 round(k.check(GAM),3)
-concurvity(GAM)
 
 conc <- concrvity(GAM)
 conc %>% 
@@ -121,6 +129,9 @@ par(mfrow=c(1,2))
 acf(resid(GAM_default, type = "scaled.pearson"), main = "ACF", lag.max = 20)
 acf(resid(GAM, type = "scaled.pearson"), main = "ACF", lag.max = 20)
 dev.off()
+
+
+#####################################################################################
 
 dat$base_resid = residuals(GAM, type = "scaled.pearson")
 
@@ -190,17 +201,14 @@ two <- draw(GAM, residuals = F, select = 2)+
   ggtitle("")
 
 three <- draw(GAM, residuals = F, select = 3)+
-  #geom_line(linewidth=1.1)+
   theme_bw(12)+
   ggtitle("")
 
 four <- draw(GAM, residuals = F, select = 4)+
-  #geom_line(linewidth=1.1)+
   theme_bw(12)+
   ggtitle("")
 
 five <- draw(GAM, residuals = F, select = 5)+
-  #geom_line(linewidth=1.1)+
   theme_bw(12)+
   ggtitle("")
 
@@ -284,7 +292,7 @@ tensor <- data.frame(one[1]) %>%
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
-  st_intersection(icesarea_sf)
+  st_intersection(BITS_buffer)
 
 #Center the scale on zero to avoid confusion
 limit <- max(abs(tensor$data..estimate)) * c(-1, 1)

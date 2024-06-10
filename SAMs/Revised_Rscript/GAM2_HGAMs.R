@@ -52,20 +52,28 @@ Coastline <- read_sf("../../../Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_
   st_transform(4326) %>% 
   st_crop(st_bbox(icesarea))
 
-# Extra for cropping tiled sf smooths
-icesarea_sf <- read_sf("../../../Oceanographic/Data/ICES_shapefiles/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
-  filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
-           SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
-  st_transform(st_crs(4326)) %>% 
-  st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) 
+#icesarea_sf <- read_sf("../../../Oceanographic/Data/ICES_shapefiles/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
+#  filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
+#           SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
+#  st_transform(st_crs(4326)) %>% 
+#  st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) 
 
+# Extra for cropping tiled sf smooths
+###########################
+dat_sf <- dat %>% 
+  st_as_sf(coords = c("meanLong", "meanLat"), 
+           crs = st_crs(4326))
+
+BITS_buffer <- st_buffer(dat_sf, dist = 0.5) %>% 
+  st_geometry(dat_sf) %>% 
+  st_union()
 
 ################################################################
 # Approach 2
 ################################################################
 
 GAM_2_default <- mgcv::bam(Density_log ~ 
-                     te(Latitude, Longitude, by=ScientificName_WoRMS) + 
+                     te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
                      #s(Year, by = ScientificName_WoRMS)+ 
                      s(Depth, ScientificName_WoRMS, bs="fs", m=2,k=45)+
                      s(bottomT, ScientificName_WoRMS, bs="fs", m=2,k=45)+
@@ -100,6 +108,7 @@ GAM_2 <- mgcv::bam(Density_log ~
                    rho = rho,
                    AR.start = start.event)
 saveRDS(GAM_2, file = "../GAMs/GAM2.rds")
+GAM_2 <- readRDS("../GAMs/GAM2.rds")
 
 conc <- concrvity(GAM_2)
 conc %>% 

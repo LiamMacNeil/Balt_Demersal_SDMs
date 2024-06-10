@@ -14,19 +14,14 @@ xlim <- c(9.420922, 22.51811)
 ylim <- c(53.91644, 59.23877)
 
 sf_use_s2(F)
-icesarea <- read_sf("../../Oceanographic/Data/ICES_areas/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
+icesarea <- read_sf("../../../Oceanographic/Data/ICES_shapefiles/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
   filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
            SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
   st_transform(st_crs(4326)) %>% 
   st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) %>% 
   as("Spatial")  
 
-# Quarterly, Decadal Predictors
-Layers <- stack(list.files("../Predictors/Yearly_quarterly_predcitors", 
-                           pattern = "\\.tif$", full.names = TRUE))
-Layers_cut <- crop(mask(Layers,icesarea), extent(icesarea))
-
-Coastline <- read_sf("../../../Feb2023_Transfer/Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_f_L1") %>% 
+Coastline <- read_sf("../../../Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_f_L1") %>% 
   st_transform(4326) %>% 
   st_crop(st_bbox(icesarea))
 
@@ -34,7 +29,7 @@ taxa <- c("Pleuronectes platessa", "Platichthys flesus",
           "Adult Gadus morhua","Juvenile Gadus morhua","Limanda limanda")
 
 # Raw quantities
-dat_x <- read_csv("../Data/HH_HL_CA_AllSpec_Swept.csv") %>% 
+dat <- read_csv("../Data/HH_HL_CA_AllSpec_Swept.csv") %>% 
   filter(HaulVal == "V" | HaulVal == "C"| HaulVal == "A") %>% 
   #filter(ScientificName_WoRMS %in% taxa) %>% 
   filter(meanLong != "NA") %>% 
@@ -63,6 +58,20 @@ dat_trawl <- dat %>%
   arrange(date, meanLat, meanLong) %>% 
   filter(Species_group %in% taxa)  
   
+# Quarterly, Decadal Predictors
+Layers <- stack(list.files("../Predictors/Q1-Q4_full", 
+                           pattern = "\\.tif$", full.names = TRUE))
+Layers_cut <- crop(mask(Layers,icesarea), extent(icesarea))
+
+dat_sf <- dat %>% 
+  st_as_sf(coords = c("meanLong", "meanLat"), 
+           crs = st_crs(4326))
+
+BITS_buffer <- st_buffer(dat_sf, dist = 0.5) %>% 
+  st_geometry(dat_sf) %>% 
+  st_union() %>% 
+  as("Spatial")
+
 
 ###########################################################
 # Extracting environmental data
@@ -79,8 +88,11 @@ for(i in Years){
   #for(j in Quarters){
     
     t <- filter(dat_trawl, Year == i & Quarter == Quarters[2] & Species_group == Groups[5])
-    covs <- Layers_cut[[which(grepl(paste0(i, ".", Quarters[2]), names(Layers_cut))==TRUE)]]
     
+    covs <- Layers_cut[[which(grepl(paste0(i, ".", Quarters[2]), names(Layers_cut))==TRUE)]]
+    covs <- crop(mask(covs, BITS_buffer), 
+                 extent(BITS_buffer))
+      
     spatDat <- SpatialPointsDataFrame(t[,c("meanLong","meanLat")], 
                                     data = data.frame(t[,c("Density_kg",
                                                            "Species_group",
@@ -165,5 +177,5 @@ st <- do.call("rbind", list(Plaice_Q1,Plaice_Q4,
                             Flounder_Q1,Flounder_Q4, 
                             Dab_Q1,Dab_Q4))
 
-write.csv(st, "../Data/Taxa_env_GAMs_v2.csv")
+write.csv(st, "../Data/Taxa_env_GAMs_v2_cutcovs.csv")
 
