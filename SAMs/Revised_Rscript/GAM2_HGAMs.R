@@ -11,7 +11,7 @@ library(oce)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 #data
-dat <- read_csv("../Data/Taxa_env_GAMs_v2.csv") %>% 
+dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>% 
   rename(SurfaceOxygen = o2...5, 
          BottomOxygen = o2...6,
          SurfaceSalinity = so...7,
@@ -41,14 +41,20 @@ ylim <- c(53.91644, 59.23877)
 sf_use_s2(F)
 
 # High res polygons
-icesarea <- read_sf("../../../Oceanographic/Data/ICES_shapefiles/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
+icesarea <- read_sf("../../Oceanographic/Data/ICES_areas/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
   filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
            SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
   st_transform(st_crs(4326)) %>% 
   st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) %>% 
   as("Spatial")  
 
-Coastline <- read_sf("../../../Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_f_L1") %>% 
+icesarea_sf <- read_sf("../../Oceanographic/Data/ICES_areas/", layer = "ICES_Areas_20160601_cut_dense_3857") %>%
+  filter(SubDivisio == "21" |SubDivisio == "22" | SubDivisio == "23" |SubDivisio == "24"|SubDivisio == "25"|
+           SubDivisio == "26"|SubDivisio == "27"|SubDivisio == "28"|SubDivisio == "29") %>% 
+  st_transform(st_crs(4326)) %>% 
+  st_crop(xmin=xlim[1], ymin=ylim[1], xmax=xlim[2], ymax=ylim[2]) 
+
+Coastline <- read_sf("../../Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_f_L1") %>% 
   st_transform(4326) %>% 
   st_crop(st_bbox(icesarea))
 
@@ -60,12 +66,11 @@ Coastline <- read_sf("../../../Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_
 
 # Extra for cropping tiled sf smooths
 ###########################
-dat_sf <- dat %>% 
-  st_as_sf(coords = c("meanLong", "meanLat"), 
-           crs = st_crs(4326))
-
-BITS_buffer <- st_buffer(dat_sf, dist = 0.5) %>% 
-  st_geometry(dat_sf) %>% 
+BITS_buffer <- dat %>% 
+  st_as_sf(coords = c("Longitude", "Latitude"), 
+           crs = st_crs(4326)) %>% 
+  st_buffer(dist = 0.25) %>% 
+  st_geometry() %>% 
   st_union()
 
 ################################################################
@@ -74,12 +79,12 @@ BITS_buffer <- st_buffer(dat_sf, dist = 0.5) %>%
 
 GAM_2_default <- mgcv::bam(Density_log ~ 
                      te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
-                     #s(Year, by = ScientificName_WoRMS)+ 
-                     s(Depth, ScientificName_WoRMS, bs="fs", m=2,k=45)+
-                     s(bottomT, ScientificName_WoRMS, bs="fs", m=2,k=45)+
+                     s(Depth, ScientificName_WoRMS, bs="fs", m=2)+
+                     s(bottomT, ScientificName_WoRMS, bs="fs", m=2)+
                      #s(chl, ScientificName_WoRMS, bs="fs",m=2,k=45)+
-                     s(BottomOxygen, ScientificName_WoRMS, bs="fs",k=45,m=2)+
-                     s(BottomSalinity, ScientificName_WoRMS, bs="fs",m=2),
+                     s(BottomOxygen, ScientificName_WoRMS, bs="fs",m=2)+
+                     s(BottomSalinity, ScientificName_WoRMS, bs="fs",m=2)+
+                     s(ScientificName_WoRMS, bs = "re"),
                    data = dat, 
                    family = tw(), 
                    method = 'fREML', 
@@ -92,40 +97,41 @@ dat <- start_event(dat, column="Year",
                    event=c("Year", "ScientificName_WoRMS"), 
                    label.event="Event")
 
-
 GAM_2 <- mgcv::bam(Density_log ~ 
                              te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
-                             #s(Year, by = ScientificName_WoRMS)+ 
                              s(Depth, ScientificName_WoRMS, bs="fs", m=2)+
                              s(bottomT, ScientificName_WoRMS, bs="fs", m=2)+
+                             #s(chl, ScientificName_WoRMS, bs="fs",m=2,k=45)+
                              s(BottomOxygen, ScientificName_WoRMS, bs="fs",m=2)+
-                             s(BottomSalinity, ScientificName_WoRMS, bs="fs",m=2),
+                             s(BottomSalinity, ScientificName_WoRMS, bs="fs",m=2)+
+                             s(ScientificName_WoRMS, bs = "re"),
                            data = dat, 
                            family = tw(), 
                            method = 'fREML', 
                            discrete = T,
-                           select = T, 
+                           select = T,
                    rho = rho,
                    AR.start = start.event)
 saveRDS(GAM_2, file = "../GAMs/GAM2.rds")
-GAM_2 <- readRDS("../GAMs/GAM2.rds")
+
+par(mfrow = c(2,2))
+gam.check(GAM_2)
+round(k.check(GAM_2),3)
 
 conc <- concrvity(GAM_2)
 conc %>% 
   filter(.type != "worst" & .type != "observed") %>% 
   filter(.term != "para" & .term != "s(ScientificName_WoRMS)") %>% 
   mutate(.term = gsub("ScientificName_WoRMS", "", .term)) %>% 
+  #mutate(.term = gsub("te(Latitude,Longitude,Year):", "te(Lat,Lon,Year):", .term)) %>% 
   draw()+
   theme_bw(12)+
   ggtitle("")+
   scale_y_continuous(limits = c(0,1))+
-  theme(axis.text.x = element_text(angle=25, hjust=1, size=8))
+  theme(axis.text.x = element_text(angle=25, hjust=1, size=5))
 ggsave("../Figures/Spring2024Revision/GAM2_concurvity.png",
        width = 12, height = 12, units = "cm", dpi = 600)
 
-par(mfrow = c(2,2))
-gam.check(GAM_2)
-round(k.check(GAM_2),3)
 
 #############################################################
 dat$base_resid = residuals(GAM_2, type = "scaled.pearson")
@@ -224,7 +230,7 @@ five <- draw(GAM_2, residuals = F, select = 5)+
 #  theme(axis.text.x = element_text(angle=45, hjust=1),
 #        plot.margin=unit(c(-0.50,0,0,0), "null"),
 #        axis.title.x = element_text(size=7),
-#        legend.position = "none")+
+##        legend.position = "none")+
 #  scale_fill_brewer(palette = "Dark2", direction = -1)+
 #  scale_color_brewer(palette = "Dark2", direction = -1)
 
@@ -277,7 +283,6 @@ ten <- draw(GAM_2, residuals = F, select = 9)+
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2", name = "Group")
 
-# Not use, indistinguishable in concurvity plots
 #eleven <- draw(GAM_2, residuals = T, select = 15)+
 #  theme_bw(8)+
 #  ggtitle("")+
@@ -286,8 +291,8 @@ ten <- draw(GAM_2, residuals = F, select = 9)+
 
 
 # Env partials to collage
-env <-  seven + eight + nine +
-  ten + plot_layout(ncol = 2, nrow = 2)
+env <-seven + eight + nine + ten+
+   plot_layout(ncol = 2, nrow = 2)
 ggsave("../Figures/Spring2024Revision/GAM2_env_Partials.png",env, units = "cm", width = 17, height = 15, dpi = 600)
 
 
@@ -298,7 +303,7 @@ tensor <- data.frame(one[1]) %>%
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
-  st_intersection(icesarea_sf)
+  st_intersection(BITS_buffer)
 
 #Center the scale on zero to avoid confusion
 limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
@@ -325,7 +330,7 @@ tensor <- data.frame(two[1]) %>%
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
-  st_intersection(icesarea_sf)
+  st_intersection(BITS_buffer)
 
 #Center the scale on zero to avoid confusion
 limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
@@ -352,7 +357,7 @@ tensor <- data.frame(three[1]) %>%
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
-  st_intersection(icesarea_sf)
+  st_intersection(BITS_buffer)
 
 #Center the scale on zero to avoid confusion
 limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
@@ -379,7 +384,7 @@ tensor <- data.frame(four[1]) %>%
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
-  st_intersection(icesarea_sf)
+  st_intersection(BITS_buffer)
 
 #Center the scale on zero to avoid confusion
 limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
@@ -406,7 +411,7 @@ tensor <- data.frame(five[1]) %>%
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
            crs = st_crs(icesarea)) %>% 
-  st_intersection(icesarea_sf)
+  st_intersection(BITS_buffer)
 
 #Center the scale on zero to avoid confusion
 limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
@@ -427,10 +432,6 @@ five_tens <- ggplot()+
                        limit=limit)+
   labs(x = "Longitude", y = "Latitude")
 
-maps <- one_tens + two_tens + three_tens + four_tens + 
-  five_tens +  plot_layout(ncol = 3,nrow = 2)
-ggsave("../Figures/Spring2024Revision/Model_1_Partials_maps.png", maps, units = "cm", width = 17, height = 15, dpi = 600)
-
 #########
 ##
 ggsave("../Figures/Spring2024Revision/GAM2_Dab_spatial_Partials.png",one_tens, units = "cm", width = 17, height = 15, dpi = 600)
@@ -440,10 +441,12 @@ ggsave("../Figures/Spring2024Revision/GAM2_JuvenilCod_spatial_Partials.png",four
 ggsave("../Figures/Spring2024Revision/GAM2_AdultCod_spatial_Partials.png",five_tens, units = "cm", width = 17, height = 15, dpi = 600)
 
 
-##############################################
-
+################################################################################
 # Spatiotemporal prediction
-##############################################
+################################################################################
+
+# how to spatially smooth and completely predict?
+
 dat$pred <- predict(GAM_2, newdata = dat %>% 
                       dplyr::select(Latitude, Longitude,
                                     Year, ScientificName_WoRMS, 
