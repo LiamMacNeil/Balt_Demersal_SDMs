@@ -78,10 +78,10 @@ BITS_buffer <- dat %>%
 ################################################################
 
 GAM_2_default <- mgcv::bam(Density_log ~ 
-                     te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
-                     s(Depth, ScientificName_WoRMS, bs="fs", m=2)+
+                             ti(Latitude, Longitude, Year_fac, d=c(2,1), bs = "fs", 
+                                by=ScientificName_WoRMS, m=2) + 
+                             s(Depth, ScientificName_WoRMS, bs="fs", m=2)+
                      s(bottomT, ScientificName_WoRMS, bs="fs", m=2)+
-                     #s(chl, ScientificName_WoRMS, bs="fs",m=2,k=45)+
                      s(BottomOxygen, ScientificName_WoRMS, bs="fs",m=2)+
                      s(BottomSalinity, ScientificName_WoRMS, bs="fs",m=2)+
                      s(ScientificName_WoRMS, bs = "re"),
@@ -98,10 +98,10 @@ dat <- start_event(dat, column="Year",
                    label.event="Event")
 
 GAM_2 <- mgcv::bam(Density_log ~ 
-                             te(Latitude, Longitude, Year, by=ScientificName_WoRMS) + 
-                             s(Depth, ScientificName_WoRMS, bs="fs", m=2)+
+                     ti(Latitude, Longitude, Year_fac, d=c(2,1), bs = "fs", 
+                        by=ScientificName_WoRMS, m=2) + 
+                     s(Depth, ScientificName_WoRMS, bs="fs", m=2)+
                              s(bottomT, ScientificName_WoRMS, bs="fs", m=2)+
-                             #s(chl, ScientificName_WoRMS, bs="fs",m=2,k=45)+
                              s(BottomOxygen, ScientificName_WoRMS, bs="fs",m=2)+
                              s(BottomSalinity, ScientificName_WoRMS, bs="fs",m=2)+
                              s(ScientificName_WoRMS, bs = "re"),
@@ -298,7 +298,7 @@ ggsave("../Figures/Spring2024Revision/GAM2_env_Partials.png",env, units = "cm", 
 
 # Clean mapping for species-level spatiotemporal autocorrelation partials
 tensor <- data.frame(one[1]) %>% 
-  mutate(data.Year = round(data.Year, 0)) %>% 
+  #mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
@@ -311,10 +311,10 @@ limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 one_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
   geom_sf(data = Coastline, fill = "grey70", color = "black", linewidth=0.05)+
-  theme_bw(12)+
+  theme_bw(10)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  facet_wrap(~data.Year)+
+  facet_wrap(~data.Year_fac)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
@@ -325,7 +325,7 @@ one_tens <- ggplot()+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(two[1]) %>% 
-  mutate(data.Year = round(data.Year, 0)) %>% 
+  # mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
@@ -338,10 +338,10 @@ limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 two_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
   geom_sf(data = Coastline, fill = "grey70", color = "black", linewidth=0.05)+
-  theme_bw(12)+
+  theme_bw(10)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  facet_wrap(~data.Year)+
+  facet_wrap(~data.Year_fac)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
@@ -352,7 +352,7 @@ two_tens <- ggplot()+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(three[1]) %>% 
-  mutate(data.Year = round(data.Year, 0)) %>% 
+  #mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
@@ -365,10 +365,10 @@ limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 three_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
   geom_sf(data = Coastline, fill = "grey70", color = "black", linewidth=0.05)+
-  theme_bw(12)+
+  theme_bw(10)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  facet_wrap(~data.Year)+
+  facet_wrap(~data.Year_fac)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
@@ -379,7 +379,7 @@ three_tens <- ggplot()+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(four[1]) %>% 
-  mutate(data.Year = round(data.Year, 0)) %>% 
+  #mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
@@ -392,10 +392,10 @@ limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 four_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
   geom_sf(data = Coastline, fill = "grey70", color = "black", linewidth=0.05)+
-  theme_bw(12)+
+  theme_bw(10)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  facet_wrap(~data.Year)+
+  facet_wrap(~data.Year_fac)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
@@ -406,7 +406,7 @@ four_tens <- ggplot()+
   labs(x = "Longitude", y = "Latitude")
 
 tensor <- data.frame(five[1]) %>% 
-  mutate(data.Year = round(data.Year, 0)) %>% 
+  #mutate(data.Year = round(data.Year, 0)) %>% 
   mutate(Longitude = data.Longitude,
          Latitude = data.Latitude ) %>% 
   st_as_sf(coords = c("data.Longitude", "data.Latitude"),
@@ -419,10 +419,10 @@ limit <- max(abs(tensor$data..estimate)) * c(-1, 1)
 five_tens <- ggplot()+
   geom_tile(data=tensor,aes(x=Longitude, y=Latitude, fill=data..estimate))+
   geom_sf(data = Coastline, fill = "grey70", color = "black", linewidth=0.05)+
-  theme_bw(12)+
+  theme_bw(10)+
   theme(axis.text = element_text(10),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  facet_wrap(~data.Year)+
+  facet_wrap(~data.Year_fac)+
   coord_sf(label_axes = "--EN",
            expand = F,
            clip = "off")+
@@ -449,7 +449,7 @@ ggsave("../Figures/Spring2024Revision/GAM2_AdultCod_spatial_Partials.png",five_t
 
 dat$pred <- predict(GAM_2, newdata = dat %>% 
                       dplyr::select(Latitude, Longitude,
-                                    Year, ScientificName_WoRMS, 
+                                    Year_fac, ScientificName_WoRMS, 
                                     Depth,Density_log, bottomT,
                                     BottomOxygen, BottomSalinity), 
                     type="response")
