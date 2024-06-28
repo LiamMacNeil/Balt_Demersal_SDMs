@@ -24,7 +24,7 @@ Coastline <- read_sf("../../../Feb2023_Transfer/Oceanographic/Data/GSHHS_shp/f/"
 taxa <- c("Pleuronectes platessa", "Platichthys flesus", 
           "Adult Gadus morhua","Juvenile Gadus morhua","Limanda limanda")
 
-# Raw quantities
+# Raw quantities (merged exchange data and swept area assessments)
 dat <- read_csv("../Data/HH_HL_CA_AllSpec_Swept.csv") %>% 
   filter(HaulVal == "V" | HaulVal == "C"| HaulVal == "A") %>% 
   filter(meanLong != "NA") %>% 
@@ -57,9 +57,6 @@ dat_trawl <- dat %>%
        Depth, meanLat, meanLong, Quarter, Gear) %>% 
   arrange(date, meanLat, meanLong) %>% 
   filter(Species_group %in% taxa)  %>% 
-  filter(Year !=2008 | Species_group != "Juvenile Gadus morhua") %>% 
-  filter(Year !=2008 | Species_group != "Adult Gadus morhua") %>% 
-  filter(Year !=2008 | Species_group != "Platichthys flesus") %>% 
   mutate(ScientificName_WoRMS = factor(Species_group, 
                                        levels = c("Limanda limanda",
                                                   "Platichthys flesus",
@@ -115,7 +112,7 @@ ggsave("../Figures/Spring2024Revision/Weight_v_catch.png", indiv_v_weight,
 Quarter <- c("Q1", "Q4")
 names(Quarter) <- c(1, 4)
 Swept_v_HaulDur <- dat_trawl %>% 
-  filter(SweptAreaDSKM2 < 50) %>% 
+  #filter(SweptAreaDSKM2 < 50) %>% 
   ggplot(aes(x = HaulDur, y = SweptAreaDSKM2)) +
   geom_point(aes(color = Gear), alpha=0.7, size=2)+
   geom_smooth(method = "lm")+
