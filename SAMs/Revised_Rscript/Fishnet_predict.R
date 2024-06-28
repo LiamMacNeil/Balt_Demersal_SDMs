@@ -28,7 +28,7 @@ dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>%
          Density_log = log(Density_kg+1)) %>% 
   mutate(Depth = abs(Depth)) %>% 
   filter(Depth < 121) %>% 
-  filter(Year !=2008 | Density_log < 7) %>% 
+  #filter(Year !=2008 | Density_log < 7) %>% 
   #filter(Year != 2008 & 
   #         ScientificName_WoRMS != "Juvenile Gadus morhua" | 
   #         ScientificName_WoRMS != "Adult Gadus morhua") %>% 
@@ -90,8 +90,6 @@ dat$pred <- predict(GAM_3, newdata = dat %>%
                                     Depth,Density_log, bottomT,
                                     BottomOxygen, BottomSalinity), 
                     type="response")
-dat <- dat %>% 
-  filter(pred < 12)
 
 #################################################################
 # Spatially gridding
@@ -180,7 +178,6 @@ delta <- full_output %>%
   pivot_wider(names_from = Phase, values_from = mean) %>% 
   drop_na() %>% 
   mutate(diff = After - Before) %>% 
-  filter(diff > -9 & diff < 9) %>% 
   st_as_sf()
 
 
