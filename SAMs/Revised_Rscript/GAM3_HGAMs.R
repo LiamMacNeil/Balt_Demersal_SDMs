@@ -27,10 +27,6 @@ dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>%
          Density_log = log(Density_kg+1)) %>% 
   mutate(Depth = abs(Depth)) %>% 
   filter(Depth < 121) %>% 
-  filter(Year !=2008 | Density_log < 7) %>% 
-  #filter(Year != 2008 & 
-  #         ScientificName_WoRMS != "Juvenile Gadus morhua" | 
-  #         ScientificName_WoRMS != "Adult Gadus morhua") %>% 
   mutate(Year_fac = factor(Year, levels =c(2001:2020), ordered = T)) %>% 
   as.data.frame()
 
@@ -524,9 +520,6 @@ dat$pred <- predict(GAM_3, newdata = dat %>%
                                     Depth,Density_log, bottomT,
                                     BottomOxygen, BottomSalinity), 
                     type="response")
-
-dat <- dat %>% 
-  filter(pred < 12)
 
 # Dab
 map <- dat %>% 
