@@ -28,10 +28,6 @@ dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>%
          Density_log = log(Density_kg+1)) %>% 
   mutate(Depth = abs(Depth)) %>% 
   filter(Depth < 121) %>% 
-  filter(Year !=2008 | Density_log < 7) %>% 
-  #filter(Year != 2008 & 
-  #         ScientificName_WoRMS != "Juvenile Gadus morhua" | 
-  #         ScientificName_WoRMS != "Adult Gadus morhua") %>% 
   mutate(Year_fac = factor(Year, levels =c(2001:2020), ordered = T)) %>% 
   as.data.frame()
 
@@ -108,17 +104,12 @@ for(fold in 1:k){
                    family = tw(), 
                    method = 'fREML', 
                    select = T,
-                   discrete=T)
+                   discrete=T,
+                  rho = 0.17,
+                  Ar.start = start.event)
   
   pred <- predict(GAM, newdata = val_data, type="response")
     
-  #CO2_modG_pred <- cbind(val_pred,
-  #                       predict(GAM, 
-  #                               CO2_modG_pred, 
-  #                               se.fit=TRUE, 
-  #                               type="response"))
-  
-  # Calculate metrics 
   #AIC
   AIC <- append(aic, list(AIC(GAM)))
   
@@ -170,6 +161,7 @@ df_result <- do.call(rbind, df_ls)
 #############################################################
 #
 df_result %>% 
+# fold failved to converge in warnings()
   filter(FoldID !=10) %>% 
   group_by(ScientificName_WoRMS, FoldID) %>% 
   mutate(cors = cor(Density_log, Predicted)) %>% 
@@ -179,12 +171,12 @@ df_result %>%
             SD_cor = sd(cors))
 
 df_result %>% 
-  filter(FoldID !=8) %>% 
+  filter(FoldID !=10) %>% 
   group_by(ScientificName_WoRMS) %>% 
   summarise(disp_mean = mean(disp),
             SD_dis = sd(disp))
 df_result %>% 
-  filter(FoldID !=8) %>% 
+  filter(FoldID !=10) %>% 
   group_by(ScientificName_WoRMS) %>% 
   summarise(mae_mean = mean(mae),
             SD_mae = sd(mae))
