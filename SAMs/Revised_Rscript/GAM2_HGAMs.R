@@ -27,7 +27,6 @@ dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>%
          Density_log = log(Density_kg+1)) %>% 
   mutate(Depth = abs(Depth)) %>% 
   filter(Depth < 121) %>% 
-  filter(Year !=2008 | Density_log < 7) %>% 
   #filter(Year != 2008 & 
   #         ScientificName_WoRMS != "Juvenile Gadus morhua" | 
   #         ScientificName_WoRMS != "Adult Gadus morhua") %>% 
@@ -69,7 +68,7 @@ Coastline <- read_sf("../../Oceanographic/Data/GSHHS_shp/f/", layer = "GSHHS_f_L
 BITS_buffer <- dat %>% 
   st_as_sf(coords = c("Longitude", "Latitude"), 
            crs = st_crs(4326)) %>% 
-  st_buffer(dist = 0.25) %>% 
+  st_buffer(dist = 0.5) %>% 
   st_geometry() %>% 
   st_union()
 
