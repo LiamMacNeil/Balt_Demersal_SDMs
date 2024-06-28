@@ -28,10 +28,6 @@ dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>%
          Density_log = log(Density_kg+1)) %>% 
   mutate(Depth = abs(Depth)) %>% 
   filter(Depth < 121) %>% 
-  filter(Year !=2008 | Density_log < 7) %>% 
-  #filter(Year != 2008 & 
-  #         ScientificName_WoRMS != "Juvenile Gadus morhua" | 
-  #         ScientificName_WoRMS != "Adult Gadus morhua") %>% 
   mutate(Year_fac = factor(Year, levels =c(2001:2020), ordered = T)) %>% 
   as.data.frame()
 
@@ -115,18 +111,13 @@ for(fold in 1:k){
                      family = tw(), 
                      method = 'fREML', 
                      select = T,
-                     discrete = T
+                     discrete = T,
+                     rho = 0.15,
+                     AR.start = start.event
   )
   
   pred <- predict(GAM_3, newdata = val_data, type="response")
   
-  #CO2_modG_pred <- cbind(val_pred,
-  #                       predict(GAM, 
-  #                               CO2_modG_pred, 
-  #                               se.fit=TRUE, 
-  #                               type="response"))
-  
-  # Calculate metrics 
   #AIC
   AIC <- append(aic, list(AIC(GAM_3)))
   
@@ -203,8 +194,8 @@ df_result_gam3 %>%
 
 pred_cor <- df_result_gam3 %>% 
   mutate(FoldID = factor(FoldID)) %>% 
-  #filter(FoldID != 10) %>% 
-  #filter(Density_log <5) %>% 
+# fold failed to converge in warnings()
+  #filter(FoldID != 8) %>% 
   mutate(Density_kg = exp(Density_log),
          Predicted_kg = exp(Predicted)) %>% 
   ggplot(aes(x = (Density_log), y= Predicted))+
@@ -234,7 +225,7 @@ pred_cor_box <- df_result %>%
   mutate(Group = factor(Group, levels= c("Dab", "Flounder", "Plaice",
                                          "Juvenile Cod", "Adult Cod"))) %>% 
   mutate(FoldID = factor(FoldID)) %>% 
-  filter(FoldID != 10) %>%
+  #filter(FoldID != 8) %>% 
   group_by(ScientificName_WoRMS, FoldID) %>% 
   mutate(cor = cor(Density_log, Predicted)) %>% 
   ggplot(aes(x = (Group), y= cor, fill = Group))+
@@ -261,7 +252,7 @@ pred_disp <- df_result %>%
   mutate(Group = factor(Group, levels= c("Dab", "Flounder", "Plaice",
                                          "Juvenile Cod", "Adult Cod"))) %>% 
   mutate(FoldID = factor(FoldID)) %>% 
-  filter(FoldID != 10) %>%
+  #filter(FoldID != 8) %>% 
   ggplot(aes(x = (Group), y= disp, 
              fill = Group))+
   geom_boxplot()+
@@ -286,7 +277,7 @@ pred_mae <- df_result %>%
   mutate(Group = factor(Group, levels= c("Dab", "Flounder", "Plaice",
                                          "Juvenile Cod", "Adult Cod"))) %>% 
   mutate(FoldID = factor(FoldID)) %>% 
-  filter(FoldID != 10) %>%
+  #filter(FoldID != 8) %>% 
   ggplot(aes(x = (Group), y= mae, 
              fill = Group))+
   geom_boxplot()+
