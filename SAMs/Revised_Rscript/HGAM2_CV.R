@@ -28,10 +28,6 @@ dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>%
          Density_log = log(Density_kg+1)) %>% 
   mutate(Depth = abs(Depth)) %>% 
   filter(Depth < 121) %>% 
-  filter(Year !=2008 | Density_log < 7) %>% 
-  #filter(Year != 2008 & 
-  #         ScientificName_WoRMS != "Juvenile Gadus morhua" | 
-  #         ScientificName_WoRMS != "Adult Gadus morhua") %>% 
   mutate(Year_fac = factor(Year, levels =c(2001:2020), ordered = T)) %>% 
   as.data.frame()
 
@@ -113,17 +109,12 @@ for(fold in 1:k){
                      family = tw(), 
                      method = 'fREML', 
                      discrete = T,
-                     select = T)
+                     select = T,
+                    rho = 0.21,
+                    AR.start = start.event)
   
   pred <- predict(GAM_2, newdata = val_data, type="response")
   
-  #CO2_modG_pred <- cbind(val_pred,
-  #                       predict(GAM, 
-  #                               CO2_modG_pred, 
-  #                               se.fit=TRUE, 
-  #                               type="response"))
-  
-  # Calculate metrics 
   #AIC
   AIC <- append(aic, list(AIC(GAM_2)))
   
@@ -201,8 +192,8 @@ df_result_gam2 %>%
 
 pred_cor <- df_result_gam2 %>% 
   mutate(FoldID = factor(FoldID)) %>% 
+# fold failed to converge in warnings()
   #filter(FoldID != 10) %>% 
-  #filter(Density_log <5) %>% 
   mutate(Density_kg = exp(Density_log),
          Predicted_kg = exp(Predicted)) %>% 
   ggplot(aes(x = (Density_log), y= Predicted))+
