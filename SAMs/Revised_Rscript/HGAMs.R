@@ -27,10 +27,6 @@ dat <- read_csv("../Data/Taxa_env_GAMs_v2_cutcovs.csv") %>%
          Density_log = log(Density_kg+1)) %>% 
   mutate(Depth = abs(Depth)) %>% 
   filter(Depth < 121) %>% 
-  filter(Year !=2008 | Density_log < 7) %>% 
-  #filter(Year != 2008 & 
-  #         ScientificName_WoRMS != "Juvenile Gadus morhua" | 
-  #         ScientificName_WoRMS != "Adult Gadus morhua") %>% 
   mutate(Year_fac = factor(Year, levels =c(2001:2020), ordered = T)) %>% 
   as.data.frame()
 
@@ -443,8 +439,6 @@ ggsave("../Figures/Spring2024Revision/AdultCod_spatial_Partials.png",five_tens, 
 ################################################################################
 # Spatiotemporal prediction
 ################################################################################
-
-# how to spatially smooth and completely predict?
 
 dat$pred <- predict(GAM, newdata = dat %>% 
                       dplyr::select(Latitude, Longitude,Year,
