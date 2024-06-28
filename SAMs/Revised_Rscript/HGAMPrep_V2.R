@@ -75,6 +75,8 @@ Quarters <- c(1,4)
 Groups <- unique(dat_trawl$Species_group)
 #Layers_cut[[which(grepl(paste0(i, ".", j), names(Layers_cut))==TRUE)]]
 
+# Run through combinations of species x quarters (seasons)
+
 for(i in Years){
   #for(j in Quarters){
     
@@ -165,5 +167,5 @@ st <- do.call("rbind", list(Plaice_Q1,Plaice_Q4,
                             Flounder_Q1,Flounder_Q4, 
                             Dab_Q1,Dab_Q4))
 
-write.csv(st, "../Data/Taxa_env_GAMs_v2.csv")
+write.csv(st, "../Data/Taxa_env_GAMs_v2_cutcovs.csv")
 
