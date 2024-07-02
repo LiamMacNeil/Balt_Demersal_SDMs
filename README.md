@@ -1,4 +1,4 @@
-# SDMs for dominant demersal fish in the Baltic Sea
+# HGAMs for dominant demersal fish in the Baltic Sea
 Seasonal (winter & autumn) SDMs for Baltic demersal fish (Dab, Flounder, Plaice, Cod) from twenty years of scientifc bottom trawls surveys.
 
 Data availability: Freely availble for download.
@@ -12,6 +12,3 @@ Copernicus marine service environmental layers
 
 [Baltic Sea Biogeochemistry Reanalysis | Copernicus Marine MyOcean Viewer.
 ](https://data.marine.copernicus.eu/product/BALTICSEA_MULTIYEAR_BGC_003_012/description?view=-&task=results&product_id=-&option=-)
-
-HELCOM seabed habitat map (https://maps.helcom.fi/website/mapservice/index.html).
-
